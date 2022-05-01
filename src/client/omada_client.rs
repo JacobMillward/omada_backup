@@ -124,10 +124,10 @@ impl OmadaClient {
                 .into_json()?;
 
             if prepare_backup_response.error_code > 0 {
-                return Err(Error::from(String::from(format!(
+                return Err(Error::from(format!(
                     "Could not prepare backup: {}",
                     prepare_backup_response.msg
-                ))));
+                )));
             }
 
             let retention_value = match retention {
@@ -151,7 +151,7 @@ impl OmadaClient {
 
             let content_disposition = response.header("Content-Disposition");
             let file_name = parse_file_name_from_content_disposition(content_disposition)
-                .unwrap_or("Omada_Backup.cfg".to_owned());
+                .unwrap_or_else(|| "Omada_Backup.cfg".to_owned());
 
             let file_path = PathBuf::from(&file_name);
             let mut backup_file = std::fs::File::create(&file_path)?;
