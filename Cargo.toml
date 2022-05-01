@@ -4,6 +4,8 @@ authors = ["Jacob Millward <jacob@millward.dev>"]
 description = "A utility for downloading backups of a TP-Link Omada SDN Controller"
 repository = "https://github.com/JacobMillward/omada_backup"
 version = "0.4.0"
+license = "MIT"
+license-file = "LICENSE"
 edition = "2021"
 
 [dependencies]
