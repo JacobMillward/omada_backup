@@ -1,9 +1,9 @@
 use clap::Parser;
-use clap_verbosity_flag::{Verbosity, InfoLevel};
+use clap_verbosity_flag::{InfoLevel, Verbosity};
 use log::info;
 use std::error::Error;
 
-use omada_backup::client::{OmadaClient, BackupRetention};
+use omada_backup::client::{BackupRetention, OmadaClient};
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -24,22 +24,24 @@ struct Args {
     #[clap(short, long, arg_enum, default_value_t =  BackupRetention::SettingsOnly)]
     retention: BackupRetention,
 
+    #[clap(short, long)]
+    trust_all_certificates: bool,
+
     #[clap(flatten)]
     verbose: Verbosity<InfoLevel>,
 }
 
-#[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
+fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     let args = Args::parse();
 
     env_logger::Builder::new()
-    .filter_level(args.verbose.log_level_filter())
-    .init();
+        .filter_level(args.verbose.log_level_filter())
+        .init();
 
-    let mut client = OmadaClient::new(&args.base_url);
-    client.login(&args.username, &args.password).await?;
-    
-    let name = client.download_backup(BackupRetention::SettingsOnly).await?;
+    let mut client = OmadaClient::new(&args.base_url, args.trust_all_certificates);
+    client.login(&args.username, &args.password)?;
+
+    let name = client.download_backup(BackupRetention::SettingsOnly)?;
     info!("Successfully saved Backup to {}", name);
 
     Ok(())
