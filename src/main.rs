@@ -8,7 +8,7 @@ use omada_backup::client::{BackupRetention, OmadaClient};
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
-    /// User to login to the Omada Controller as
+    /// User to login to the Omada Controller
     #[clap(short, long)]
     username: String,
 
@@ -24,6 +24,7 @@ struct Args {
     #[clap(short, long, arg_enum, default_value_t =  BackupRetention::SettingsOnly)]
     retention: BackupRetention,
 
+    /// Enables trusting of invalid HTTPS certificates, including self-signed certificates.
     #[clap(short, long)]
     trust_all_certificates: bool,
 
