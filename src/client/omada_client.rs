@@ -77,11 +77,13 @@ impl OmadaClient {
         &self,
         retention: BackupRetention,
     ) -> Result<String, Box<dyn Error + Sync + Send>> {
-        if let Some(token) = &self.csrf_token {
-            let prepare_url = self
-                .construct_controller_url("api/v2/maintenance/backup/prepareBackup")
-                .unwrap();
+        let prepare_url_opt =
+            self.construct_controller_url("api/v2/maintenance/backup/prepareBackup");
+        let backup_url_opt = self.construct_controller_url("api/v2/files/backup");
 
+        if let (Some(prepare_url), Some(mut backup_url), Some(token)) =
+            (prepare_url_opt, backup_url_opt, &self.csrf_token)
+        {
             let prepare_backup_response = self
                 .client
                 .post(prepare_url)
@@ -106,10 +108,6 @@ impl OmadaClient {
                 BackupRetention::Days90 => "90",
                 BackupRetention::Days180 => "180",
             };
-
-            let mut backup_url = self
-                .construct_controller_url("api/v2/files/backup")
-                .unwrap();
 
             backup_url
                 .query_pairs_mut()
