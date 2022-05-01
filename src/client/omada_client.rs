@@ -76,10 +76,8 @@ impl OmadaClient {
         let login_response = self
             .client
             .post(self.construct_controller_url("api/v2/login").unwrap())
-            .json(&serde_json::json!({
-                "username": username,
-                "password": password,
-            }))
+            .header("Content-Type", "application/json")
+            .body(format!("{{\"username\":\"{}\",\"password\":\"{}\"}}", username, password))
             .send()
             .await?;
 
