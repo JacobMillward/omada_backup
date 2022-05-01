@@ -1,5 +1,6 @@
 use std::error::Error;
 
+use clap::ArgEnum;
 use reqwest::{
     header::{self, HeaderValue},
     Client, Url,
@@ -14,6 +15,7 @@ pub struct OmadaClient {
     controller_id: Option<String>,
 }
 
+#[derive(Clone, ArgEnum)]
 pub enum BackupRetention {
     SettingsOnly,
     Days7,
