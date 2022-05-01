@@ -1,6 +1,8 @@
-use std::error::Error;
+use std::path::PathBuf;
 
 use clap::ArgEnum;
+use log::{debug, error};
+use normpath::PathExt;
 use reqwest::{
     header::{self, HeaderValue},
     Client, Url,
@@ -25,6 +27,9 @@ pub enum BackupRetention {
     Days180,
 }
 
+// Helpful definition of Error
+type Error = Box<dyn std::error::Error + Sync + Send>;
+
 impl OmadaClient {
     pub fn new(base_url: &str) -> OmadaClient {
         let client = reqwest::Client::builder()
@@ -41,18 +46,32 @@ impl OmadaClient {
         }
     }
 
-    pub async fn login(&mut self, username: &str, password: &str) -> Result<(), reqwest::Error> {
+    pub async fn login(&mut self, username: &str, password: &str) -> Result<(), Error> {
         let api_info = self
             .client
             .get(self.base_url.join("api/info").unwrap())
             .send()
             .await?
             .json::<ApiResult<ApiInfo>>()
-            .await?
-            .result
-            .unwrap();
+            .await?;
 
-        self.controller_id = Some(api_info.controller_id);
+        if api_info.error_code > 0 {
+            error!(
+                "Error retrieving API Info: Error {} {}",
+                api_info.error_code, api_info.msg
+            );
+            debug!("{:#?}", api_info);
+            return Err(Error::from("Could not retrieve controller ID"));
+        }
+
+        let id = api_info.result.unwrap().controller_id;
+        debug!("Retrieved Controller ID of {}", &id);
+        self.controller_id = Some(id);
+
+        debug!(
+            "Logging in to Omada Controller at {}",
+            self.base_url.as_str()
+        );
 
         let login_response = self
             .client
@@ -64,21 +83,26 @@ impl OmadaClient {
             .send()
             .await?;
 
-        let login = login_response
-            .json::<ApiResult<LoginResult>>()
-            .await?
-            .result
-            .unwrap();
+        let login = login_response.json::<ApiResult<LoginResult>>().await?;
 
-        self.csrf_token = Some(login.token);
+        if login.error_code > 0 {
+            error!(
+                "Error logging in: Error {} {}",
+                api_info.error_code, api_info.msg
+            );
+            debug!("{:#?}", login);
+            return Err(Error::from("Could not login"));
+        }
+
+        debug!("{:#?}", login);
+
+        self.csrf_token = Some(login.result.unwrap().token);
 
         Ok(())
     }
 
-    pub async fn download_backup(
-        &self,
-        retention: BackupRetention,
-    ) -> Result<String, Box<dyn Error + Sync + Send>> {
+    pub async fn download_backup(&self, retention: BackupRetention) -> Result<String, Error> {
+        debug!("Preparing Backup");
         let prepare_url_opt =
             self.construct_controller_url("api/v2/maintenance/backup/prepareBackup");
         let backup_url_opt = self.construct_controller_url("api/v2/files/backup");
@@ -96,7 +120,7 @@ impl OmadaClient {
                 .await?;
 
             if prepare_backup_response.error_code > 0 {
-                return Err(Box::<dyn Error + Sync + Send>::from(String::from(format!(
+                return Err(Error::from(String::from(format!(
                     "Could not prepare backup: {}",
                     prepare_backup_response.msg
                 ))));
@@ -126,16 +150,18 @@ impl OmadaClient {
             let file_name = parse_file_name_from_content_disposition(content_header)
                 .unwrap_or("Omada_Backup.cfg".to_owned());
 
-            let mut backup_file = std::fs::File::create(&file_name)?;
+            let file_path = PathBuf::from(&file_name);
+            let mut backup_file = std::fs::File::create(&file_path)?;
             let mut content = std::io::Cursor::new(response.bytes().await?);
+
+            let normalised_path = file_path.normalize()?.into_os_string().into_string().unwrap();
+            debug!("Writing backup to {:?}", &normalised_path);
             std::io::copy(&mut content, &mut backup_file)?;
 
-            return Ok(file_name);
+            return Ok(normalised_path);
         }
 
-        Err(Box::<dyn Error + Sync + Send>::from(String::from(
-            "Not Logged In",
-        )))
+        Err(Error::from("Not Logged In"))
     }
 
     fn construct_controller_url(&self, relative_path: &str) -> Option<Url> {
