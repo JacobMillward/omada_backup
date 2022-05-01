@@ -1,21 +1,14 @@
-use std::path::PathBuf;
+use std::{io::BufReader, path::PathBuf, sync::Arc};
 
 use clap::ArgEnum;
 use log::{debug, error};
 use normpath::PathExt;
-use reqwest::{
-    header::{self, HeaderValue},
-    Client, Url,
-};
+use ureq::Agent;
+use url::Url;
+
+use crate::client::helpers::parse_file_name_from_content_disposition;
 
 use super::api_models::*;
-
-pub struct OmadaClient {
-    client: Client,
-    base_url: Url,
-    csrf_token: Option<String>,
-    controller_id: Option<String>,
-}
 
 #[derive(Clone, ArgEnum)]
 pub enum BackupRetention {
@@ -27,16 +20,26 @@ pub enum BackupRetention {
     Days180,
 }
 
+pub struct OmadaClient {
+    client: Agent,
+    base_url: Url,
+    csrf_token: Option<String>,
+    controller_id: Option<String>,
+}
+
 // Helpful definition of Error
 type Error = Box<dyn std::error::Error + Sync + Send>;
 
 impl OmadaClient {
-    pub fn new(base_url: &str) -> OmadaClient {
-        let client = reqwest::Client::builder()
-            .danger_accept_invalid_certs(true)
-            .cookie_store(true)
+    pub fn new(base_url: &str, trust_invalid_certs: bool) -> OmadaClient {
+        let tls_connector = native_tls::TlsConnector::builder()
+            .danger_accept_invalid_certs(trust_invalid_certs)
             .build()
             .unwrap();
+
+        let client = ureq::AgentBuilder::new()
+            .tls_connector(Arc::new(tls_connector))
+            .build();
 
         OmadaClient {
             client,
@@ -46,14 +49,12 @@ impl OmadaClient {
         }
     }
 
-    pub async fn login(&mut self, username: &str, password: &str) -> Result<(), Error> {
-        let api_info = self
+    pub fn login(&mut self, username: &str, password: &str) -> Result<(), Error> {
+        let api_info: ApiResult<ApiInfo> = self
             .client
-            .get(self.base_url.join("api/info").unwrap())
-            .send()
-            .await?
-            .json::<ApiResult<ApiInfo>>()
-            .await?;
+            .get(self.base_url.join("api/info")?.as_str())
+            .call()?
+            .into_json()?;
 
         if api_info.error_code > 0 {
             error!(
@@ -73,15 +74,22 @@ impl OmadaClient {
             self.base_url.as_str()
         );
 
-        let login_response = self
+        let login: ApiResult<LoginResult> = self
             .client
-            .post(self.construct_controller_url("api/v2/login").unwrap())
-            .header("Content-Type", "application/json")
-            .body(format!("{{\"username\":\"{}\",\"password\":\"{}\"}}", username, password))
-            .send()
-            .await?;
-
-        let login = login_response.json::<ApiResult<LoginResult>>().await?;
+            .post(
+                self.construct_controller_url("api/v2/login")
+                    .unwrap()
+                    .as_str(),
+            )
+            .set("Content-Type", "application/json")
+            .send_string(
+                format!(
+                    "{{\"username\":\"{}\",\"password\":\"{}\"}}",
+                    username, password
+                )
+                .as_str(),
+            )?
+            .into_json()?;
 
         if login.error_code > 0 {
             error!(
@@ -99,7 +107,7 @@ impl OmadaClient {
         Ok(())
     }
 
-    pub async fn download_backup(&self, retention: BackupRetention) -> Result<String, Error> {
+    pub fn download_backup(&self, retention: BackupRetention) -> Result<String, Error> {
         debug!("Preparing Backup");
         let prepare_url_opt =
             self.construct_controller_url("api/v2/maintenance/backup/prepareBackup");
@@ -108,14 +116,12 @@ impl OmadaClient {
         if let (Some(prepare_url), Some(mut backup_url), Some(token)) =
             (prepare_url_opt, backup_url_opt, &self.csrf_token)
         {
-            let prepare_backup_response = self
+            let prepare_backup_response: ApiResult<()> = self
                 .client
-                .post(prepare_url)
-                .header("Csrf-Token", token)
-                .send()
-                .await?
-                .json::<ApiResult<()>>()
-                .await?;
+                .post(prepare_url.as_str())
+                .set("Csrf-Token", token)
+                .call()?
+                .into_json()?;
 
             if prepare_backup_response.error_code > 0 {
                 return Err(Error::from(String::from(format!(
@@ -139,22 +145,26 @@ impl OmadaClient {
 
             let response = self
                 .client
-                .get(backup_url)
-                .header("Csrf-Token", token)
-                .send()
-                .await?;
+                .get(backup_url.as_str())
+                .set("Csrf-Token", token)
+                .call()?;
 
-            let content_header = response.headers().get(header::CONTENT_DISPOSITION);
-            let file_name = parse_file_name_from_content_disposition(content_header)
+            let content_disposition = response.header("Content-Disposition");
+            let file_name = parse_file_name_from_content_disposition(content_disposition)
                 .unwrap_or("Omada_Backup.cfg".to_owned());
 
             let file_path = PathBuf::from(&file_name);
             let mut backup_file = std::fs::File::create(&file_path)?;
-            let mut content = std::io::Cursor::new(response.bytes().await?);
 
-            let normalised_path = file_path.normalize()?.into_os_string().into_string().unwrap();
+            let normalised_path = file_path
+                .normalize()?
+                .into_os_string()
+                .into_string()
+                .unwrap();
+
             debug!("Writing backup to {:?}", &normalised_path);
-            std::io::copy(&mut content, &mut backup_file)?;
+            let mut buffered_reader = BufReader::new(response.into_reader());
+            std::io::copy(&mut buffered_reader, &mut backup_file)?;
 
             return Ok(normalised_path);
         }
@@ -174,23 +184,4 @@ impl OmadaClient {
 
         None
     }
-}
-
-fn parse_file_name_from_content_disposition(header: Option<&HeaderValue>) -> Option<String> {
-    if let Some(value) = header {
-        if value.is_empty() {
-            return None;
-        }
-
-        let value_str = percent_encoding::percent_decode_str(value.to_str().unwrap())
-            .decode_utf8()
-            .unwrap();
-        let index = value_str.find("fileName=").map(|i| i + 9);
-
-        if let Some(start) = index {
-            return Some(value_str[start..].to_owned());
-        }
-    }
-
-    None
 }
