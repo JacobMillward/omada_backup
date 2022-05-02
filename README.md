@@ -20,18 +20,19 @@ USAGE:
     omada_backup [OPTIONS] --username <USERNAME> --password <PASSWORD> --base-url <BASE_URL>
 
 OPTIONS:
-    -b, --base-url <BASE_URL>       Base URL for the Omada SDN Controller
-    -h, --help                      Print help information
-    -p, --password <PASSWORD>       Password for the User
-    -q, --quiet                     Less output per occurrence
-    -r, --retention <RETENTION>     Data retention period for the backup [default: settings-only]
-                                    [possible values: settings-only, days7, days30, days60, days90,
-                                    days180]
-    -t, --trust-all-certificates    Enables trusting of invalid HTTPS certificates, including self-
-                                    signed certificates
-    -u, --username <USERNAME>       User to login to the Omada Controller
-    -v, --verbose                   More output per occurrence
-    -V, --version                   Print version information
+    -b, --base-url <BASE_URL>          Base URL for the Omada SDN Controller
+    -h, --help                         Print help information
+    -o, --output-file <OUTPUT_FILE>    Write to file instead of current directory
+    -p, --password <PASSWORD>          Password for the User
+    -q, --quiet                        Less output per occurrence
+    -r, --retention <RETENTION>        Data retention period for the backup [default: settings-only]
+                                       [possible values: settings-only, days7, days30, days60,
+                                       days90, days180]
+    -t, --trust-all-certificates       Enables trusting of invalid HTTPS certificates, including
+                                       self-signed certificates
+    -u, --username <USERNAME>          User to login to the Omada Controller
+    -v, --verbose                      More output per occurrence
+    -V, --version                      Print version information                 Print version information
 ```
 
 ## Building
