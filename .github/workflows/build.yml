@@ -32,7 +32,7 @@ jobs:
 
       - name: cargo build
         run: |
-          if [ ${{inputs.build_release}} ]; then
+          if [ ${{inputs.release}} ]; then
             cargo build --release
           else
             cargo build

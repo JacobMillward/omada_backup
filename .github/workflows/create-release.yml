@@ -10,6 +10,7 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       upload_artifacts: true
+      release: true
   
   release:
     needs: build
@@ -20,10 +21,17 @@ jobs:
           path: release_artifacts
 
       - name: Rename artifacts
-        run:  for file in release_artifacts/*; do file $file; done
-      # - name: Release
-      #   uses: softprops/action-gh-release@v1
-      #   with:
-      #     files: release_artifacts/*
-      #     fail_on_unmatched_files: true
-      #     generate_release_notes: true
+        working-directory: ./release_artifacts
+        run: |
+          for dir in *; do
+            platform=$(echo ${dir#*-} | tr '[:upper:]' '[:lower:']);
+            zip -r omada_backup-${{github.ref_name}}-$platform $dir/*;
+            rm -r $dir;
+          done
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release_artifacts/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          draft: true
