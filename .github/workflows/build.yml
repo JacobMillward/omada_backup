@@ -6,6 +6,10 @@ on:
     branches: [ main ]
   workflow_dispatch:
   workflow_call:
+    inputs:
+      upload_artifacts:
+        required: false
+        type: boolean
 
 jobs:
   build:
@@ -27,13 +31,13 @@ jobs:
 
       - name: Upload build artifact (Windows)
         uses: actions/upload-artifact@v3
-        if: runner.os == 'Windows'
+        if: inputs.upload_artifacts && runner.os == 'Windows'
         with:
           name: omada-backup-${{ runner.os }}
           path: target/release/omada_backup.exe
       - name: Upload build artifact (Linux, OSX)
         uses: actions/upload-artifact@v3
-        if: runner.os != 'Windows'
+        if: inputs.upload_artifacts && runner.os != 'Windows'
         with:
           name: omada-backup-${{ runner.os }}
           path: target/release/omada_backup
