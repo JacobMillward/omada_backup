@@ -1,5 +1,6 @@
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub](https://img.shields.io/github/license/jacobmillward/omada_backup?label=License)](https://github.com/JacobMillward/omada_backup/blob/main/LICENSE)
 [![Build](https://github.com/JacobMillward/omada_backup/actions/workflows/build.yml/badge.svg)](https://github.com/JacobMillward/omada_backup/actions/workflows/build.yml) 
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/jacobmillward/omada_backup?label=Release)](https://github.com/JacobMillward/omada_backup/releases/latest)
 
 # Omada Backup
 
