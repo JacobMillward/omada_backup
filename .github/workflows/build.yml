@@ -43,11 +43,11 @@ jobs:
         uses: actions/upload-artifact@v3
         if: inputs.upload_artifacts && runner.os == 'Windows'
         with:
-          name: omada-backup-${{runner.arch}}-${{ runner.os }}
+          name: omada-backup--${{runner.arch}}-${{ runner.os }}
           path: target/release/omada_backup.exe
       - name: Upload build artifact (Linux, OSX)
         uses: actions/upload-artifact@v3
         if: inputs.upload_artifacts && runner.os != 'Windows'
         with:
-          name: omada-backup-${{runner.arch}}-${{ runner.os }}
+          name: omada-backup--${{runner.arch}}-${{ runner.os }}
           path: target/release/omada_backup

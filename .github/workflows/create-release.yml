@@ -26,7 +26,7 @@ jobs:
         working-directory: ./release_artifacts
         run: |
           for dir in *; do
-            platform=$(echo ${dir#*-} | tr '[:upper:]' '[:lower:']);
+            platform=$(echo ${dir#*--} | tr '[:upper:]' '[:lower:']);
             zip -r omada_backup-${{github.ref_name}}-$platform.zip $dir/*;
             rm -r $dir;
           done
