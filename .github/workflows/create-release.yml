@@ -3,10 +3,13 @@ on:
   push:
     tags:
       - "v*.*.*"
-
+  workflow_dispatch:
+    
 jobs:
   build:
     uses: ./.github/workflows/build.yml
+    with:
+      upload_artifacts: true
   
   release:
     needs: build
@@ -16,9 +19,11 @@ jobs:
         with:
           path: release_artifacts
 
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: release_artifacts/*
-          fail_on_unmatched_files: true
-          generate_release_notes: true
+      - name: Rename artifacts
+        run:  for file in release_artifacts/*; do file $file; done
+      # - name: Release
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     files: release_artifacts/*
+      #     fail_on_unmatched_files: true
+      #     generate_release_notes: true
