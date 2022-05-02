@@ -27,7 +27,7 @@ jobs:
         run: |
           for dir in *; do
             platform=$(echo ${dir#*-} | tr '[:upper:]' '[:lower:']);
-            zip -r omada_backup-${{github.ref_name}}-$platform $dir/*;
+            zip -r omada_backup-${{github.ref_name}}-$platform.zip $dir/*;
             rm -r $dir;
           done
       - name: Release
