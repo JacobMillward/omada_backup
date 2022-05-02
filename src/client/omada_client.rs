@@ -107,7 +107,11 @@ impl OmadaClient {
         Ok(())
     }
 
-    pub fn download_backup(&self, retention: BackupRetention) -> Result<String, Error> {
+    pub fn download_backup(
+        &self,
+        output_file_path: Option<String>,
+        retention: BackupRetention,
+    ) -> Result<String, Error> {
         debug!("Preparing Backup");
         let prepare_url_opt =
             self.construct_controller_url("api/v2/maintenance/backup/prepareBackup");
@@ -150,11 +154,20 @@ impl OmadaClient {
                 .call()?;
 
             let content_disposition = response.header("Content-Disposition");
-            let file_name = parse_file_name_from_content_disposition(content_disposition)
-                .unwrap_or_else(|| "Omada_Backup.cfg".to_owned());
+            let file_name = match output_file_path {
+                Some(name) => name,
+                None => parse_file_name_from_content_disposition(content_disposition)
+                    .unwrap_or_else(|| "Omada_Backup.cfg".to_owned()),
+            };
 
             let file_path = PathBuf::from(&file_name);
-            let mut backup_file = std::fs::File::create(&file_path)?;
+            let mut backup_file = std::fs::File::create(&file_path).map_err(|e| {
+                Error::from(format!(
+                    "Couldn't write to file {}: {}",
+                    &file_name,
+                    &e.kind()
+                ))
+            })?;
 
             let normalised_path = file_path
                 .normalize()?
