@@ -6,6 +6,13 @@ on:
     branches: [ main ]
   workflow_dispatch:
   workflow_call:
+    inputs:
+      upload_artifacts:
+        required: false
+        type: boolean
+      release:
+        required: false
+        type: boolean
 
 jobs:
   build:
@@ -23,17 +30,24 @@ jobs:
             toolchain: stable
             default: true
 
-      - run: cargo build --release
+      - name: cargo build
+        shell: bash
+        run: |
+          if [ ${{inputs.release}} ]; then
+            cargo build --release
+          else
+            cargo build
+          fi
 
       - name: Upload build artifact (Windows)
         uses: actions/upload-artifact@v3
-        if: runner.os == 'Windows'
+        if: inputs.upload_artifacts && runner.os == 'Windows'
         with:
-          name: omada-backup-${{ runner.os }}
+          name: omada-backup-${{runner.arch}}-${{ runner.os }}
           path: target/release/omada_backup.exe
       - name: Upload build artifact (Linux, OSX)
         uses: actions/upload-artifact@v3
-        if: runner.os != 'Windows'
+        if: inputs.upload_artifacts && runner.os != 'Windows'
         with:
-          name: omada-backup-${{ runner.os }}
+          name: omada-backup-${{runner.arch}}-${{ runner.os }}
           path: target/release/omada_backup

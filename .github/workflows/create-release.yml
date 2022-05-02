@@ -1,12 +1,18 @@
 name: Create Release
+permissions:
+  contents: write
 on:
   push:
     tags:
       - "v*.*.*"
-
+  workflow_dispatch:
+    
 jobs:
   build:
     uses: ./.github/workflows/build.yml
+    with:
+      upload_artifacts: true
+      release: true
   
   release:
     needs: build
@@ -16,6 +22,14 @@ jobs:
         with:
           path: release_artifacts
 
+      - name: Rename artifacts
+        working-directory: ./release_artifacts
+        run: |
+          for dir in *; do
+            platform=$(echo ${dir#*-} | tr '[:upper:]' '[:lower:']);
+            zip -r omada_backup-${{github.ref_name}}-$platform.zip $dir/*;
+            rm -r $dir;
+          done
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
