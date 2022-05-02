@@ -1,3 +1,6 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build](https://github.com/JacobMillward/omada_backup/actions/workflows/build.yml/badge.svg)](https://github.com/JacobMillward/omada_backup/actions/workflows/build.yml) 
+
 # Omada Backup
 
 A utility for downloading backups of a TP-Link Omada SDN Controller.
