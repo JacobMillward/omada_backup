@@ -10,6 +10,9 @@ on:
       upload_artifacts:
         required: false
         type: boolean
+      release:
+        required: false
+        type: boolean
 
 jobs:
   build:
@@ -27,17 +30,23 @@ jobs:
             toolchain: stable
             default: true
 
-      - run: cargo build --release
+      - name: cargo build
+        run: |
+          if [ ${{inputs.build_release}} ]; then
+            cargo build --release
+          else
+            cargo build
+          fi
 
       - name: Upload build artifact (Windows)
         uses: actions/upload-artifact@v3
         if: inputs.upload_artifacts && runner.os == 'Windows'
         with:
-          name: omada-backup-${{ runner.os }}
+          name: omada-backup-${{runner.arch}}-${{ runner.os }}
           path: target/release/omada_backup.exe
       - name: Upload build artifact (Linux, OSX)
         uses: actions/upload-artifact@v3
         if: inputs.upload_artifacts && runner.os != 'Windows'
         with:
-          name: omada-backup-${{ runner.os }}
+          name: omada-backup-${{runner.arch}}-${{ runner.os }}
           path: target/release/omada_backup
