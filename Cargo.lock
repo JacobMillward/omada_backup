@@ -398,7 +398,7 @@ dependencies = [
 
 [[package]]
 name = "omada_backup"
-version = "0.6.0"
+version = "1.0.0"
 dependencies = [
  "clap",
  "clap-verbosity-flag",
