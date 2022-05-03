@@ -6,9 +6,8 @@ use normpath::PathExt;
 use ureq::Agent;
 use url::Url;
 
-use crate::client::helpers::parse_file_name_from_content_disposition;
-
 use super::api_models::*;
+use super::helpers::parse_file_name_from_content_disposition;
 
 #[derive(Clone, ArgEnum)]
 pub enum BackupRetention {
@@ -154,13 +153,22 @@ impl OmadaClient {
                 .call()?;
 
             let content_disposition = response.header("Content-Disposition");
+            let suggested_file_name = parse_file_name_from_content_disposition(content_disposition)
+                .unwrap_or_else(|| "Omada_Backup.cfg".to_owned());
+
             let file_name = match output_file_path {
-                Some(name) => name,
-                None => parse_file_name_from_content_disposition(content_disposition)
-                    .unwrap_or_else(|| "Omada_Backup.cfg".to_owned()),
+                Some(path) => {
+                    if path.ends_with('/') {
+                        path + &suggested_file_name
+                    } else {
+                        path
+                    }
+                }
+                None => suggested_file_name,
             };
 
             let file_path = PathBuf::from(&file_name);
+
             let mut backup_file = std::fs::File::create(&file_path).map_err(|e| {
                 Error::from(format!(
                     "Couldn't write to file {}: {}",
