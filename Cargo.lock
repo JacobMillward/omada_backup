@@ -444,11 +444,11 @@ dependencies = [
 
 [[package]]
 name = "normpath"
-version = "0.3.2"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04aaf5e9cb0fbf883cc0423159eacdf96a9878022084b35c462c428cab73bcaf"
+checksum = "972dec05f98e7c787ede35d7a9ea4735eb7788c299287352757b3def6cc1f7b5"
 dependencies = [
- "winapi",
+ "windows-sys",
 ]
 
 [[package]]
