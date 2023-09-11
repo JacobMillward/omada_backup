@@ -1,0 +1,33 @@
+name: Dependabot Auto-Merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write # This is required for the `gh pr` commands to work
+  # These permissions are required for the gh cli commands to work
+  repository-projects: read
+  contents: write
+  issues: write
+
+jobs:
+  dependabot-auto-merge:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
+    steps:
+      - name: Fetch metadata
+        uses: dependabot/fetch-metadata@v1
+        id: dependabot-metadata
+      - name: Merge Dependabot PR
+        # Only merge if it's a semver patch update
+        # This ensures that only patch updates are automatically merged
+        # Major and minor updates should be reviewed by a human
+        if: ${{steps.dependabot-metadata.outputs.update-type == 'version-update:semver-patch'}}
+        run: |
+          gh pr edit "$PR_URL" --add-label "auto-merged"
+          gh pr review --approve "$PR_URL"
+          gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
