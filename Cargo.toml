@@ -9,7 +9,7 @@ readme = "README.md"
 edition = "2021"
 
 [dependencies]
-clap = { version = "3.2.2", features = ["derive"] }
+clap = { version = "4.4.10", features = ["derive"] }
 clap-verbosity-flag = "1.0.1"
 ureq = { version = "2.7.1", features = ["json", "cookies", "native-tls"] }
 native-tls = "0.2.11"
